@@ -10,33 +10,26 @@ from .ripple_current import RippleCurrent
 
 class Inverter(om.Group):
     def setup(self):
-
-        E_on_test = 1.0
-        E_off_test = 1.0
-        I_test = 1.0
-        V_test = 1.0
+        # https://assets.wolfspeed.com/uploads/2020/12/C2M0025120D.pdf
+        E_on_test = 2.18*1e-3
+        E_off_test = 0.68*1e-3
+        I_test = 63
+        V_test = 1200
         self.add_subsystem("mosfet",
                            MOSFETLoss(E_on_test=E_on_test,
                                       E_off_test=E_off_test,
                                       I_test=I_test,
                                       V_test=V_test),
                            promotes_inputs=['I_phase_rms',
-                                            'R_ds_on',
-                                            'f_sw',
-                                            'V_bus',
-                                            'Q_rr',
+                                            'switching_frequency',
+                                            'bus_voltage',
                                             'n_phases'])
 
         # ac_filter = om.Group()
         self.add_subsystem('ac_filter_inductor',
                            ACFilterInductor(),
                            promotes_inputs=['I_phase_rms',
-                                            'resistivity',
-                                            'n_turns',
                                             'r_wire',
-                                            'R_core',
-                                            'r_core',
-                                            'mu',
                                             'n_phases'],
                            promotes_outputs=['fill_factor'])
 
@@ -53,13 +46,13 @@ class Inverter(om.Group):
 
         self.add_subsystem("phase_voltage",
                            om.ExecComp(
-                               "phase_voltage = ((load_phase_back_emf + load_phase_resistance * (2**0.5)*I_phase_rms)**2 + (2*pi*L*frequency*(2**0.5)*I_phase_rms)**2)**0.5",
+                               "phase_voltage = ((load_phase_back_emf + load_phase_resistance * (2**0.5)*I_phase_rms)**2 + (2*pi*L*electrical_frequency*(2**0.5)*I_phase_rms)**2)**0.5",
                                phase_voltage={'units': 'V'},
                                load_phase_back_emf={'units': 'V'},
                                load_phase_resistance={'units': 'ohm'},
                                I_phase_rms={'units': 'A'},
                                L={'units': 'H'},
-                               frequency={'units': 'Hz'}),
+                               electrical_frequency={'units': 'Hz'}),
                            promotes=['*'])
 
         self.add_subsystem("power_factor",
@@ -71,18 +64,18 @@ class Inverter(om.Group):
                            promotes=['*'])
 
         self.add_subsystem("modulation_index",
-                           om.ExecComp("modulation_index = 2 * phase_voltage / V_bus",
+                           om.ExecComp("modulation_index = 2 * phase_voltage / bus_voltage",
                                        modulation_index={'units': 'unitless'},
                                        phase_voltage={'units': 'V'},
-                                       V_bus={'units': 'V'}),
+                                       bus_voltage={'units': 'V'}),
                            promotes=['*'])
 
         self.add_subsystem("ripple_current",
                            RippleCurrent(),
                            promotes_inputs=['modulation_index',
                                             'L',
-                                            'f_sw',
-                                            'V_bus'],
+                                            'switching_frequency',
+                                            'bus_voltage'],
                            promotes_outputs=['I_ripple'])
 
         self.add_subsystem("dc_link_cap",
@@ -90,10 +83,11 @@ class Inverter(om.Group):
                            promotes_inputs=['I_phase_rms',
                                             'modulation_index',
                                             'power_factor',
-                                            'f_sw',
-                                            'frequency',
-                                            'C',
-                                            'dissipation_factor'],
+                                            'switching_frequency',
+                                            'electrical_frequency',
+                                            # 'C',
+                                            # 'dissipation_factor'
+                                            ],
                            promotes_outputs=['V_ripple'])
 
         self.add_subsystem("total_loss",

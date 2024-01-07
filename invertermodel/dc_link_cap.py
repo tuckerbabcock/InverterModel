@@ -14,9 +14,9 @@ class DCLinkCapacitor(om.ExplicitComponent):
                        desc="Modulation index")
         self.add_input("power_factor", units='unitless',
                        desc="Power factor of the motor circuit accounting for external passive filters")
-        self.add_input("f_sw", units='Hz',
+        self.add_input("switching_frequency", units='Hz',
                        desc="The inverter’s switching frequency")
-        self.add_input("frequency", units='Hz',
+        self.add_input("electrical_frequency", units='Hz',
                        desc="The inverter’s output electrical frequency")
         self.add_input("C", units='F',
                        desc="The capacitor's capacitance")
@@ -34,8 +34,8 @@ class DCLinkCapacitor(om.ExplicitComponent):
         I_phase_rms = inputs['I_phase_rms']
         modulation_index = inputs['modulation_index']
         power_factor = inputs['power_factor']
-        f_sw = inputs['f_sw']
-        frequency = inputs['frequency']
+        switching_frequency = inputs['switching_frequency']
+        electrical_frequency = inputs['electrical_frequency']
         C = inputs['C']
         dissipation_factor = inputs['dissipation_factor']
 
@@ -46,8 +46,10 @@ class DCLinkCapacitor(om.ExplicitComponent):
             modulation_index * power_factor
 
         I_cap_rms = np.sqrt(I_in_rms**2 - I_in_avg**2)
+        print(
+            f"I_in_rms: {I_in_rms}, I_in_avg: {I_in_avg}, I_cap_rms: {I_cap_rms}")
 
-        outputs['V_ripple'] = I_cap_rms / (C * f_sw)
+        outputs['V_ripple'] = I_cap_rms / (C * switching_frequency)
 
-        R_cap_f = dissipation_factor / (2*np.pi*frequency*C)
+        R_cap_f = dissipation_factor / (2*np.pi*electrical_frequency*C)
         outputs['P_loss'] = I_cap_rms**2 * R_cap_f
