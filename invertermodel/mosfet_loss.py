@@ -60,7 +60,7 @@ class MOSFETLoss(om.ExplicitComponent):
 
         P_rr = 0.25 * Q_rr * bus_voltage * switching_frequency
 
-        print(f"P_cond: {P_cond}, P_on: {P_on}, P_off: {P_off}, P_rr: {P_rr}")
+        # print(f"P_cond: {P_cond}, P_on: {P_on}, P_off: {P_off}, P_rr: {P_rr}")
 
         outputs['P_loss'] = n_phases * switches_per_phase * \
             (P_cond + P_on + P_off + P_rr)

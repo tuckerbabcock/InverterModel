@@ -30,8 +30,8 @@ class Inverter(om.Group):
                            ACFilterInductor(),
                            promotes_inputs=['I_phase_rms',
                                             'r_wire',
-                                            'n_phases'],
-                           promotes_outputs=['fill_factor'])
+                                            'n_phases',
+                                            'electrical_frequency'])
 
         self.add_subsystem("combined_inductance",
                            om.ExecComp(
@@ -55,6 +55,21 @@ class Inverter(om.Group):
                                electrical_frequency={'units': 'Hz'}),
                            promotes=['*'])
 
+        # bal = om.BalanceComp()
+        # bal.add_balance("phase_voltage_slack", eq_units='V',
+        #                 lhs_name="phase_voltage", normalize=False)
+        # self.add_subsystem("phase_voltage_slack",
+        #                    bal,
+        #                    promotes_inputs=['phase_voltage'],
+        #                    promotes_outputs=['phase_voltage_slack'])
+
+        # self.add_subsystem("phase_voltage_balance",
+        #                    om.ExecComp("phase_voltage_balance = phase_voltage - phase_voltage_slack",
+        #                                phase_voltage_balance={'units': 'V'},
+        #                                phase_voltage={'units': 'V'},
+        #                                phase_voltage_slack={'units': 'V'}),
+        #                    promotes=['*'])
+
         self.add_subsystem("power_factor",
                            om.ExecComp(
                                "power_factor = load_phase_back_emf / phase_voltage",
@@ -68,7 +83,9 @@ class Inverter(om.Group):
                                        modulation_index={'units': 'unitless'},
                                        phase_voltage={'units': 'V'},
                                        bus_voltage={'units': 'V'}),
-                           promotes=['*'])
+                           promotes_inputs=['bus_voltage',
+                                            'phase_voltage'],
+                           promotes_outputs=['modulation_index'])
 
         self.add_subsystem("ripple_current",
                            RippleCurrent(),
@@ -84,7 +101,6 @@ class Inverter(om.Group):
                                             'modulation_index',
                                             'power_factor',
                                             'switching_frequency',
-                                            'electrical_frequency',
                                             # 'C',
                                             # 'dissipation_factor'
                                             ],
@@ -100,3 +116,26 @@ class Inverter(om.Group):
         self.connect('mosfet.P_loss', 'total_loss.mosfet_loss')
         self.connect('ac_filter_inductor.P_loss', 'total_loss.inductor_loss')
         self.connect('dc_link_cap.P_loss', 'total_loss.capacitor_loss')
+
+        self.add_subsystem("power_out",
+                           om.ExecComp("power_out = I_phase_rms * phase_voltage",
+                                       power_out={'units': 'W'},
+                                       I_phase_rms={'units': 'A'},
+                                       phase_voltage={'units': 'V'}),
+                           promotes=['*'])
+
+        self.add_subsystem("efficiency",
+                           om.ExecComp("efficiency = power_out / (power_out + total_loss)",
+                                       efficiency={'units': 'unitless'},
+                                       power_out={'units': 'W'},
+                                       total_loss={'units': 'W'}),
+                           promotes=['*'])
+
+        self.add_subsystem('mass',
+                           om.ExecComp('mass = inductor_mass + cap_mass',
+                                       mass={'units': 'kg'},
+                                       inductor_mass={'units': 'kg'},
+                                       cap_mass={'units': 'kg'}),
+                           promotes_outputs=['mass'])
+        self.connect('ac_filter_inductor.mass', 'mass.inductor_mass')
+        self.connect('dc_link_cap.mass', 'mass.cap_mass')

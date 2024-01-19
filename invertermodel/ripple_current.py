@@ -25,5 +25,7 @@ class RippleCurrent(om.ExplicitComponent):
         switching_frequency = inputs['switching_frequency']
         bus_voltage = inputs['bus_voltage']
 
+        # print(
+        #     f"I_ripple: bus_voltage: {bus_voltage}, modulation_index: {modulation_index}, L: {L}, switching_frequency: {switching_frequency}")
         outputs['I_ripple'] = 0.5 * bus_voltage * \
             modulation_index / (2 * np.sqrt(3) * L * switching_frequency)
