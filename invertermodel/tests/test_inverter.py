@@ -33,8 +33,9 @@ class TestInverter(unittest.TestCase):
         prob.driver.opt_settings['Verify level'] = -1
         prob.driver.opt_settings['Print file'] = "SNOPT.out"
 
-        # # Common design vars
-        # prob.model.add_design_var('I_phase_rms', lower=10)
+        # Common design vars
+        prob.model.add_design_var('I_phase_rms', lower=10)
+        prob.model.add_design_var('r_wire', lower=0.001)
 
         # ### MOSFET
         # Design vars
@@ -45,15 +46,15 @@ class TestInverter(unittest.TestCase):
         # Design vars
         prob.model.add_design_var('ac_filter_inductor.n_turns', lower=1)
         prob.model.add_design_var(
-            'ac_filter_inductor.R_core', lower=0.002, upper=0.1, ref0=0.002)
+            'ac_filter_inductor.R_core', lower=0.002, upper=0.1, ref0=0.002, ref=0.1)
         prob.model.add_design_var(
-            'ac_filter_inductor.r_core', lower=0.001, ref0=0.001)
+            'ac_filter_inductor.r_core', lower=0.001, ref0=0.001, ref=1.0)
         prob.model.add_design_var(
             'ac_filter_inductor.mu_r', lower=200, upper=1200)
 
         # Constraints
         prob.model.add_constraint(
-            'ac_filter_inductor.radius_difference', lower=0.0)
+            'ac_filter_inductor.radius_difference', lower=0.0001, linear=True)
         prob.model.add_constraint(
             'ac_filter_inductor.fill_factor', upper=0.5, ref=0.5)
         prob.model.add_constraint(
@@ -63,17 +64,18 @@ class TestInverter(unittest.TestCase):
         # Design vars
         prob.model.add_design_var('dc_link_cap.C', lower=0.0, ref=1e-4)
 
-        # prob.model.add_design_var('phase_voltage_slack')
-        # prob.model.add_constraint('phase_voltage_balance', equals=0.0)
+        prob.model.add_design_var('modulation_index_slack', upper=1.0)
+        prob.model.add_constraint('modulation_index_balance', equals=0.0)
+        prob.model.add_constraint('modulation_index', upper=1.0)
 
-        prob.model.add_constraint('I_ripple', upper=10)
-        prob.model.add_constraint('V_ripple', upper=1)
+        prob.model.add_constraint('I_ripple', upper=0.05)
+        prob.model.add_constraint('V_ripple', upper=0.01)
 
         prob.model.add_objective('efficiency', ref=-1)
 
         prob.setup()
 
-        prob.set_val('load_inductance', -7.79225548e-06)  # 5.88007877e-5)
+        prob.set_val('load_inductance', 5.88007877e-5)
         prob.set_val('load_phase_back_emf', 946.36734443)
         prob.set_val('load_phase_resistance', 0.28172998)
 
